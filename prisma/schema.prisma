@@ -1,0 +1,145 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Dashboard {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  isPreset    Boolean  @default(false)
+  layoutJson  String
+  widgetsJson String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model AlertRule {
+  id             String              @id @default(cuid())
+  name           String
+  keyword        String?
+  category       String?
+  minSeverity    Int?
+  country        String?
+  enabled        Boolean             @default(true)
+  lastTriggeredAt DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  notifications  AlertNotification[]
+}
+
+model AlertNotification {
+  id        String    @id @default(cuid())
+  ruleId    String?
+  rule      AlertRule? @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+  title     String
+  body      String
+  eventId   String
+  sourceUrl String?
+  read      Boolean   @default(false)
+  createdAt DateTime  @default(now())
+}
+
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+enum SourceKind {
+  EVENT
+  WEBCAM
+  TOOL
+  LINK
+}
+
+model ProviderSource {
+  id             String     @id @default(cuid())
+  key            String     @unique
+  name           String
+  kind           SourceKind
+  category       String
+  description    String?
+  enabled        Boolean    @default(true)
+  isDefault      Boolean    @default(true)
+  regionScope    String?
+  countryScope   String?
+  requiresApiKey Boolean    @default(false)
+  command        String?
+  argsJson       String     @default("[]")
+  launchUrl      String?
+  sourceUrl      String?
+  metadataJson   String     @default("{}")
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@index([kind, enabled])
+  @@index([category, enabled])
+}
+
+model WorkspacePreset {
+  id              String   @id @default(cuid())
+  key             String   @unique
+  name            String
+  description     String?
+  isSystem        Boolean  @default(false)
+  sourceKeysJson  String   @default("[]")
+  panelLayoutJson String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([isSystem, name])
+}
+
+enum WebcamProvider {
+  CURATED
+  WSDOT
+  CALTRANS_CCTV
+  ONTARIO_511
+  NZTA_TRAFFIC
+  DIGITRAFFIC_FI
+  VANCOUVER_OPENDATA
+  OHGO
+  FAA_WEATHERCAMS
+}
+
+model WebcamSource {
+  id           String         @id @default(cuid())
+  provider     WebcamProvider
+  externalId   String
+  name         String
+  pageUrl      String
+  streamUrl    String?
+  thumbnailUrl String?
+  country      String
+  region       String
+  city         String
+  lat          Float?
+  lng          Float?
+  tagsJson     String         @default("[]")
+  metadataJson String         @default("{}")
+  isActive     Boolean        @default(true)
+  lastSyncedAt DateTime?
+  checks       WebcamCheck[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@unique([provider, externalId])
+  @@index([provider, isActive])
+}
+
+model WebcamCheck {
+  id           String       @id @default(cuid())
+  sourceId      String
+  source        WebcamSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  available     Boolean
+  statusCode    Int?
+  statusDetail  String?
+  checkedAt     DateTime     @default(now())
+
+  @@index([sourceId, checkedAt])
+}
